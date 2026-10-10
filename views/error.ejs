@@ -1,0 +1,14 @@
+<%- include('partials/head', { title: title, bodyClass: 'app' }) %>
+
+<main class="error-wrap">
+  <div>
+    <p class="code"><%= code %></p>
+    <h2 style="margin:0 0 6px"><%= message %></h2>
+    <p class="muted">The page you were looking for could not be found.</p>
+    <p style="margin-top:20px">
+      <a class="btn" href="/dashboard">Back to dashboard</a>
+    </p>
+  </div>
+</main>
+
+<%- include('partials/foot') %>

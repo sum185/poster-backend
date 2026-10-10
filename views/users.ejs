@@ -1,0 +1,42 @@
+<%- include('partials/head', { title: title, bodyClass: 'app' }) %>
+
+<div class="app-shell">
+  <%- include('partials/sidebar', { active: active, currentAdmin: currentAdmin }) %>
+
+  <div class="main">
+    <%- include('partials/topbar', { heading: 'Admins', subtitle: 'Accounts that can access this dashboard' }) %>
+
+    <div class="content">
+      <div class="card">
+        <div class="card-head">
+          <h3>Admin Accounts <span class="muted">(<%= admins.length %>)</span></h3>
+        </div>
+        <div class="card-body" style="padding:0">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Name</th><th>Email</th><th>Role</th><th class="nowrap">Joined</th></tr>
+            </thead>
+            <tbody>
+              <% admins.forEach(function (a) { %>
+                <tr>
+                  <td class="muted"><%= a.id %></td>
+                  <td><strong><%= a.name %></strong><% if (currentAdmin && currentAdmin.id === a.id) { %> <span class="muted">(you)</span><% } %></td>
+                  <td class="muted"><%= a.email %></td>
+                  <td><span class="badge badge-role"><%= a.role %></span></td>
+                  <td class="muted nowrap"><%= a.created_at %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p class="hint" style="text-align:left">
+        To add more admins, set <code>ADMIN_EMAIL</code> / <code>ADMIN_PASSWORD</code> before the first run,
+        or insert rows into the <code>admins</code> table.
+      </p>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

@@ -1,0 +1,103 @@
+<%- include('partials/head', { title: title, bodyClass: 'app' }) %>
+
+<div class="app-shell">
+  <%- include('partials/sidebar', { active: active, currentAdmin: currentAdmin }) %>
+
+  <div class="main">
+    <%- include('partials/topbar', { heading: 'Dashboard', subtitle: 'Overview of your poster workspace' }) %>
+
+    <div class="content">
+      <div class="grid grid-4">
+        <div class="card stat">
+          <div class="label">Total Posters</div>
+          <div class="value brand"><%= stats.posters %></div>
+        </div>
+        <div class="card stat">
+          <div class="label">Published</div>
+          <div class="value green"><%= stats.published %></div>
+        </div>
+        <div class="card stat">
+          <div class="label">Drafts</div>
+          <div class="value amber"><%= stats.drafts %></div>
+        </div>
+        <div class="card stat">
+          <div class="label">Admins</div>
+          <div class="value"><%= stats.admins %></div>
+        </div>
+      </div>
+
+      <div class="grid grid-2" style="margin-top:18px">
+        <div class="card">
+          <div class="card-head">
+            <h3>Recent Posters</h3>
+            <a href="/posters" class="btn btn-ghost btn-sm">View all</a>
+          </div>
+          <div class="card-body" style="padding:0">
+            <% if (posters.length === 0) { %>
+              <div class="empty">No posters yet. <a href="/posters">Create one</a>.</div>
+            <% } else { %>
+              <table>
+                <thead>
+                  <tr><th>Title</th><th>Category</th><th>Status</th><th class="nowrap">Created</th></tr>
+                </thead>
+                <tbody>
+                  <% posters.forEach(function (p) { %>
+                    <tr>
+                      <td><strong><%= p.title %></strong></td>
+                      <td class="muted"><%= p.category %></td>
+                      <td><span class="badge badge-<%= p.status %>"><%= p.status %></span></td>
+                      <td class="muted nowrap"><%= p.created_at %></td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            <% } %>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>By Category</h3></div>
+          <div class="card-body">
+            <% if (categories.length === 0) { %>
+              <div class="empty">No data yet.</div>
+            <% } else {
+                 var max = Math.max.apply(null, categories.map(function (c) { return c.n; }));
+                 categories.forEach(function (c) { %>
+              <div style="margin-bottom:14px">
+                <div class="cat-row">
+                  <span><%= c.category %></span>
+                  <span class="muted"><%= c.n %></span>
+                </div>
+                <div class="bar"><span style="width:<%= Math.round((c.n / max) * 100) %>%"></span></div>
+              </div>
+            <% }); } %>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:18px">
+        <div class="card-head"><h3>Recent Activity</h3></div>
+        <div class="card-body" style="padding:0">
+          <% if (activity.length === 0) { %>
+            <div class="empty">No activity recorded yet.</div>
+          <% } else { %>
+            <table>
+              <thead><tr><th>Actor</th><th>Action</th><th class="nowrap">When</th></tr></thead>
+              <tbody>
+                <% activity.forEach(function (a) { %>
+                  <tr>
+                    <td><%= a.actor %></td>
+                    <td class="muted"><%= a.action %></td>
+                    <td class="muted nowrap"><%= a.created_at %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

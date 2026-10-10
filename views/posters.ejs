@@ -1,0 +1,80 @@
+<%- include('partials/head', { title: title, bodyClass: 'app' }) %>
+
+<div class="app-shell">
+  <%- include('partials/sidebar', { active: active, currentAdmin: currentAdmin }) %>
+
+  <div class="main">
+    <%- include('partials/topbar', { heading: 'Posters', subtitle: 'Create and manage your posters' }) %>
+
+    <div class="content">
+      <div class="card">
+        <div class="card-head">
+          <h3>New Poster</h3>
+        </div>
+        <div class="card-body">
+          <form method="post" action="/posters" class="toolbar">
+            <input type="text" name="title" placeholder="Poster title" required style="flex:1;min-width:220px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-size:15px" />
+            <input type="text" name="category" placeholder="Category" value="General" style="min-width:160px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-size:15px" />
+            <select name="status" style="padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-size:15px">
+              <% statuses.forEach(function (s) { %>
+                <option value="<%= s %>"><%= s.charAt(0).toUpperCase() + s.slice(1) %></option>
+              <% }); %>
+            </select>
+            <button class="btn" type="submit">Add poster</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:18px">
+        <div class="card-head">
+          <h3>All Posters <span class="muted">(<%= posters.length %>)</span></h3>
+          <form method="get" action="/posters" class="toolbar">
+            <input type="search" name="q" value="<%= q %>" placeholder="Search by title, category, status" />
+            <button class="btn btn-ghost btn-sm" type="submit">Search</button>
+            <% if (q) { %><a class="btn btn-ghost btn-sm" href="/posters">Clear</a><% } %>
+          </form>
+        </div>
+        <div class="card-body" style="padding:0">
+          <% if (posters.length === 0) { %>
+            <div class="empty">No posters found<%= q ? ' for "' + q + '"' : '' %>.</div>
+          <% } else { %>
+            <table>
+              <thead>
+                <tr><th>#</th><th>Title</th><th>Category</th><th>Status</th><th class="nowrap">Created</th><th></th></tr>
+              </thead>
+              <tbody>
+                <% posters.forEach(function (p) { %>
+                  <tr>
+                    <td class="muted"><%= p.id %></td>
+                    <td><strong><%= p.title %></strong></td>
+                    <td class="muted"><%= p.category %></td>
+                    <td><span class="badge badge-<%= p.status %>"><%= p.status %></span></td>
+                    <td class="muted nowrap"><%= p.created_at %></td>
+                    <td>
+                      <div style="display:flex;gap:8px;justify-content:flex-end">
+                        <form method="post" action="/posters/<%= p.id %>/status" class="inline-form">
+                          <select name="status" aria-label="Change status">
+                            <% statuses.forEach(function (s) { %>
+                              <option value="<%= s %>" <%= s === p.status ? 'selected' : '' %>><%= s %></option>
+                            <% }); %>
+                          </select>
+                          <button class="btn btn-ghost btn-sm" type="submit">Save</button>
+                        </form>
+                        <form method="post" action="/posters/<%= p.id %>/delete">
+                          <button class="btn btn-danger" type="submit"
+                                  data-confirm="Delete poster &quot;<%= p.title %>&quot;?">Delete</button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/foot') %>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+    body {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .login-card {
+      background: #fff; padding: 40px; border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 100%; max-width: 380px;
+    }
+    .login-card h1 { font-size: 24px; color: #1a1a2e; margin-bottom: 6px; text-align: center; }
+    .login-card p.sub { text-align: center; color: #888; margin-bottom: 28px; font-size: 14px; }
+    label { display: block; font-size: 13px; color: #444; margin-bottom: 6px; font-weight: 600; }
+    input {
+      width: 100%; padding: 12px 14px; margin-bottom: 18px;
+      border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none;
+    }
+    input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.15); }
+    .error {
+      background: #ffe0e0; color: #c0392b; padding: 10px 12px;
+      border-radius: 8px; font-size: 13px; margin-bottom: 18px; text-align: center;
+    }
+    button {
+      width: 100%; padding: 13px; border: none; border-radius: 8px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff; font-size: 15px; font-weight: 600; cursor: pointer;
+    }
+    button:hover { opacity: 0.92; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <h1>Admin Login</h1>
+    <p class="sub">Please sign in to continue</p>
+
+    <div class="error" id="errorBox" style="display:none">
+      Invalid username or password
+    </div>
+
+    <form method="POST" action="/login">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" required autocomplete="username" />
+
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" required autocomplete="current-password" />
+
+      <button type="submit">Sign In</button>
+    </form>
+  </div>
+
+  <script>
+    if (new URLSearchParams(window.location.search).get('error')) {
+      document.getElementById('errorBox').style.display = 'block';
+    }
+  </script>
+</body>
+</html>
