@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: poster-backend
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        value: admin123
+      - key: SESSION_SECRET
+        value: some_random_secret_key_123
