@@ -14,7 +14,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 // Middleware
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.json({ limit: '50mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '../public')));
 app.use(
   session({
     secret: process.env.SESSION_SECRET || 'change-this-secret-in-production',
@@ -46,7 +46,7 @@ app.get('/', (req, res) => {
 
 app.get('/login', (req, res) => {
   if (req.session.isAdmin) return res.redirect('/admin');
-  res.sendFile(path.join(__dirname, 'html_pages', 'login.html'));
+  res.sendFile(path.join(__dirname, '../html_pages', 'login.html'));
 });
 
 app.post('/login', async (req, res) => {
@@ -71,7 +71,7 @@ app.post('/logout', (req, res) => {
 });
 
 app.get('/admin', requireAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'html_pages', 'dashboard.html'));
+  res.sendFile(path.join(__dirname, '../html_pages', 'dashboard.html'));
 });
 
 app.get('/api/stats', requireAuth, (req, res) => {
