@@ -204,11 +204,11 @@ app.get('/api/public/templates/:category', async (req, res) => {
 app.use((req, res) => res.status(404).send('404 - Not Found'));
 
 // Start server
-async function main() {
-  const connectionString = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/poster_db';
+async function initDB() {
+  const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/poster_db';
   pool = new Pool({
     connectionString,
-    ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
+    ssl: (process.env.POSTGRES_URL || process.env.DATABASE_URL) ? { rejectUnauthorized: false } : false
   });
 
   await pool.query(`
@@ -235,12 +235,21 @@ async function main() {
     `);
   }
   console.log('✅ PostgreSQL Database connected successfully.');
-
   adminPasswordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
-  app.listen(PORT, () => {
-    console.log(`Server running: http://localhost:${PORT}`);
-    console.log(`Login: ${ADMIN_USERNAME} / ${ADMIN_PASSWORD}`);
-  });
 }
 
-main();
+// For local development
+if (require.main === module) {
+  initDB().then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running: http://localhost:${PORT}`);
+      console.log(`Login: ${ADMIN_USERNAME} / ${ADMIN_PASSWORD}`);
+    });
+  });
+} else {
+  // For Vercel serverless functions, init DB asynchronously. 
+  // (In production with high traffic, a top-level await or separate connection logic might be better)
+  initDB().catch(console.error);
+}
+
+module.exports = app;
