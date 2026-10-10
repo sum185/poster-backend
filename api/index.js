@@ -2,7 +2,8 @@ const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const path = require('path');
-const { Pool } = require('pg');
+const sqlite3 = require('sqlite3');
+const { open } = require('sqlite');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,13 +27,14 @@ app.use(
 
 // Password hash is generated at startup (bcrypt)
 let adminPasswordHash;
-let pool;
+let db;
 
 // ---- Auth middleware ----
 function requireAuth(req, res, next) {
   if (req.session && req.session.isAdmin) {
     return next();
   }
+  // API requests -> 401, pages -> redirect to login
   if (req.path.startsWith('/api/')) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
@@ -40,6 +42,8 @@ function requireAuth(req, res, next) {
 }
 
 // ---- Routes ----
+
+// Root
 app.get('/', (req, res) => {
   res.redirect(req.session.isAdmin ? '/admin' : '/login');
 });
@@ -91,7 +95,7 @@ app.get('/api/stats', requireAuth, (req, res) => {
     recentActivity: [
       { id: 1, action: 'New user registered', detail: 'priya@example.com', time: '2 min ago' },
       { id: 2, action: 'Post published', detail: 'Summer Sale Poster', time: '18 min ago' },
-      { id: 3, action: 'Payment received', detail: '₹1,200.00', time: '1 hr ago' },
+      { id: 3, action: 'Payment received', detail: 'Γé╣1,200.00', time: '1 hr ago' },
       { id: 4, action: 'New user registered', detail: 'rahul@example.com', time: '3 hr ago' },
       { id: 5, action: 'Post updated', detail: 'Festival Offer Poster', time: '5 hr ago' },
     ],
@@ -101,8 +105,8 @@ app.get('/api/stats', requireAuth, (req, res) => {
 // Categories API (protected)
 app.get('/api/categories', requireAuth, async (req, res) => {
   try {
-    const categories = await pool.query('SELECT * FROM categories ORDER BY created_at ASC');
-    res.json(categories.rows);
+    const categories = await db.all('SELECT * FROM categories ORDER BY created_at ASC');
+    res.json(categories);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch categories' });
   }
@@ -112,8 +116,8 @@ app.post('/api/categories', requireAuth, async (req, res) => {
   try {
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required' });
-    const result = await pool.query('INSERT INTO categories (name) VALUES ($1) RETURNING id', [name]);
-    res.json({ success: true, id: result.rows[0].id, name });
+    const result = await db.run('INSERT INTO categories (name) VALUES (?)', [name]);
+    res.json({ success: true, id: result.lastID, name });
   } catch (error) {
     res.status(500).json({ error: 'Failed to save category. Might already exist.' });
   }
@@ -123,7 +127,7 @@ app.put('/api/categories/:id', requireAuth, async (req, res) => {
   try {
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required' });
-    await pool.query('UPDATE categories SET name = $1 WHERE id = $2', [name, req.params.id]);
+    await db.run('UPDATE categories SET name = ? WHERE id = ?', [name, req.params.id]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update category' });
@@ -132,7 +136,7 @@ app.put('/api/categories/:id', requireAuth, async (req, res) => {
 
 app.delete('/api/categories/:id', requireAuth, async (req, res) => {
   try {
-    await pool.query('DELETE FROM categories WHERE id = $1', [req.params.id]);
+    await db.run('DELETE FROM categories WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete category' });
@@ -142,8 +146,8 @@ app.delete('/api/categories/:id', requireAuth, async (req, res) => {
 // Templates API (protected)
 app.get('/api/templates', requireAuth, async (req, res) => {
   try {
-    const templates = await pool.query('SELECT * FROM templates ORDER BY created_at DESC');
-    res.json(templates.rows);
+    const templates = await db.all('SELECT * FROM templates ORDER BY created_at DESC');
+    res.json(templates);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch templates' });
   }
@@ -154,16 +158,16 @@ app.post('/api/templates', requireAuth, async (req, res) => {
     const { name, category, image_data } = req.body;
     
     // Check if template with same name exists
-    const existing = await pool.query('SELECT id FROM templates WHERE name = $1', [name]);
-    if (existing.rows.length > 0) {
+    const existing = await db.get('SELECT id FROM templates WHERE name = ?', [name]);
+    if (existing) {
       return res.status(400).json({ error: 'A template with this name already exists' });
     }
 
-    const result = await pool.query(
-      'INSERT INTO templates (name, category, image_data) VALUES ($1, $2, $3) RETURNING id',
+    const result = await db.run(
+      'INSERT INTO templates (name, category, image_data) VALUES (?, ?, ?)',
       [name, category, image_data]
     );
-    res.json({ success: true, id: result.rows[0].id });
+    res.json({ success: true, id: result.lastID });
   } catch (error) {
     res.status(500).json({ error: 'Failed to save template' });
   }
@@ -171,7 +175,7 @@ app.post('/api/templates', requireAuth, async (req, res) => {
 
 app.delete('/api/templates/:id', requireAuth, async (req, res) => {
   try {
-    await pool.query('DELETE FROM templates WHERE id = $1', [req.params.id]);
+    await db.run('DELETE FROM templates WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete template' });
@@ -184,8 +188,8 @@ app.delete('/api/templates/:id', requireAuth, async (req, res) => {
 
 app.get('/api/public/categories', async (req, res) => {
   try {
-    const categories = await pool.query('SELECT * FROM categories ORDER BY created_at ASC');
-    res.json(categories.rows);
+    const categories = await db.all('SELECT * FROM categories ORDER BY created_at ASC');
+    res.json(categories);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch categories' });
   }
@@ -193,8 +197,8 @@ app.get('/api/public/categories', async (req, res) => {
 
 app.get('/api/public/templates', async (req, res) => {
   try {
-    const templates = await pool.query('SELECT * FROM templates ORDER BY created_at DESC');
-    res.json(templates.rows);
+    const templates = await db.all('SELECT * FROM templates ORDER BY created_at DESC');
+    res.json(templates);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch templates' });
   }
@@ -203,8 +207,8 @@ app.get('/api/public/templates', async (req, res) => {
 app.get('/api/public/templates/:category', async (req, res) => {
   try {
     const { category } = req.params;
-    const templates = await pool.query('SELECT * FROM templates WHERE category = $1 ORDER BY created_at DESC', [category]);
-    res.json(templates.rows);
+    const templates = await db.all('SELECT * FROM templates WHERE category = ? ORDER BY created_at DESC', [category]);
+    res.json(templates);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch templates' });
   }
@@ -215,41 +219,36 @@ app.use((req, res) => res.status(404).send('404 - Not Found'));
 
 // ---- Start server ----
 async function initDB() {
-  const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
-  if (!connectionString) {
-    console.error('❌ ERROR: POSTGRES_URL is not set. Database will not connect.');
-    return;
-  }
-  pool = new Pool({
-    connectionString,
-    ssl: { rejectUnauthorized: false }
+  // Database connection
+  db = await open({
+    filename: path.join(__dirname, '../database.sqlite'),
+    driver: sqlite3.Database
   });
 
-  await pool.query(`
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS templates (
-      id SERIAL PRIMARY KEY,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       category TEXT NOT NULL,
       image_data TEXT NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE IF NOT EXISTS categories (
-      id SERIAL PRIMARY KEY,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
   
   // Insert some default categories if table is empty
-  const catCount = await pool.query('SELECT COUNT(*) as count FROM categories');
-  if (parseInt(catCount.rows[0].count) === 0) {
-    await pool.query(`
+  const catCount = await db.get('SELECT COUNT(*) as count FROM categories');
+  if (catCount.count === 0) {
+    await db.exec(`
       INSERT INTO categories (name) VALUES 
-      ('Diwali'), ('Birthday'), ('Political'), ('Daily Quote')
-      ON CONFLICT DO NOTHING;
+      ('Diwali'), ('Birthday'), ('Political'), ('Daily Quote');
     `);
   }
-  console.log('✅ PostgreSQL Database connected successfully.');
+  console.log('Database connected successfully.');
 
   adminPasswordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
 }
